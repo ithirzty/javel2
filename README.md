@@ -1,4 +1,4 @@
-# Javel2 - A fast and simple HTTP framework for [<img src="https://bah-lang.xyz/logo.png" alt="b" height=30px>ah](bah-lang.xyz)
+# Javel2 - A fast and simple HTTP framework for [<img src="https://bah-lang.xyz/logo.png" alt="b" height=30px>ah](https://bah-lang.xyz)
 This is the second version of [javel](https://github.com/ithirzty/javel), better, faster, prettier.
 
 ## Get started
