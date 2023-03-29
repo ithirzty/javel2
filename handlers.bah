@@ -1,0 +1,70 @@
+javel2_defaultError(rp ptr, code int, req http_request*, resp http_response*) {
+    r javel2_route* = rp
+    resp.code = code
+    resp.write("Error "+intToStr(code)+" while attempting to serve '"+req.path+"'.
+    Additionaly, there are no error configured for the Javel2 route '"+r.path+"'.")
+    resp.send()
+}
+
+javel2_serveFile(pr ptr, req http_request*, resp http_response*) {
+    r javel2_route* = pr
+    fm = fileMap{}
+    p = javel_parsePath(req.path, resp)
+    p = r.base + "/" + p[len(r.path):]
+    file = fm.open(p)
+    l = fm.size
+
+    if fm.isValid() == false || string(req.path).count("/..") > 0 {
+        fm.close()
+        r.error(404, req, resp)
+        return
+    }
+
+    if r.disableParsing == false && string(p).hasSuffix(".html") {
+        file = __JAVEL_parseHTMLtemplate(file, req)
+        fm.close()
+        l = len(file)
+    }
+
+    arr = Bah_Array_Type{
+        elemSize: 1
+        length: 4096
+    }
+
+    startStr = req.getHeader("range")
+    start = 0
+    resp.code = HTTP_PARTIAL_CONTENT
+
+    if len(startStr) == 0 {
+        resp.setHeader("content-length", intToStr(l))
+        resp.setHeader("accept-range", "bytes")
+        resp.setHeader("content-range", "bytes 0-"+intToStr(l-1)+"/"+intToStr(l))
+        resp.write("")
+        resp.send()
+        resp.flush(file)
+        fm.close()
+        return
+    }
+
+    startStr = startStr[6: len(startStr)-1]
+    start = strToInt(startStr)
+    resp.setHeader("accept-range", "bytes")
+    resp.setHeader("content-range", "bytes "+intToStr(start)+"-"+intToStr(l-1)+"/"+intToStr(l))
+    resp.setHeader("content-length", intToStr(l - start))
+    resp.write("")
+    resp.send()
+    i = start
+    
+
+    for i < l, i += 4096 {
+        arr.data = &file[i]
+        if i + 4096 >= l {
+            arr.length = l - i
+        }
+        if resp.flush(<[]char>&arr) == false {
+            break
+        }
+    }
+
+    fm.close()
+}

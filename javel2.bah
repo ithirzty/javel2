@@ -1,0 +1,120 @@
+#import "iostream.bah"
+#import "string.bah"
+#import "json.bah"
+#import "http.bah"
+#import "thread.bah"
+#import "eval.bah"
+#import "time.bah"
+
+__JAVEL2_GLOBAL_PTR ptr
+
+#define javel2_defaultError(rp ptr, code int, req http_request*, resp http_response*)
+#define javel2_serveFile(pr ptr, req http_request*, resp http_response*)
+#define javel2_sreamHandle(pr ptr, req http_request*, resp http_response*)
+
+javel2_defaultErrorPTR = <ptr>javel2_defaultError
+javel2_serveFilePTR = <ptr>javel2_serveFile
+
+struct javel2_route {
+    base: cpstring
+    path: cpstring
+    cacheMaxAge: int = -1
+    disableParsing: bool
+    handle: function(javel2_route*, http_request*, http_response*) = javel2_serveFilePTR
+    error: function(javel2_route*, int, http_request*, http_response*) = javel2_defaultErrorPTR
+
+    match(r http_request*) int {
+        if len(r.path) < len(this.path) {
+            return 0
+        }
+
+        if string(r.path).hasPrefix(this.path) {
+            return len(this.path)
+        }
+
+        return 0
+    }
+}
+
+struct javel2 extend http_server {
+    certFile: cpstring
+    keyFile: cpstring
+    routes: []javel2_route*
+
+    selectRoute(req http_request*, resp http_response*) {
+        if len(this.routes) == 0 {
+            return
+        }
+
+        best = this.routes[0]
+        score = best.match(req)
+
+        i=0; for i < len(this.routes), i++ {
+            rc = this.routes[i].match(req)
+            if rc > score {
+                score = rc
+                best = this.routes[i]
+            }
+        }
+
+        if best.cacheMaxAge != -1 {
+            resp.setHeader("Cache-Control", "max-age="+intToStr(best.cacheMaxAge))
+        }
+        best.handle(req, resp)
+    }
+
+    _init() {
+        this.handle = <ptr>this.selectRoute
+    }
+
+    launch() {
+        this.routes[len(this.routes)] = new javel2_route {
+            path: "/__JAVEL/stream"
+            handle: <ptr>javel2_sreamHandle
+        }
+        if this.portTLS != 0 {
+            async this.listenAndServe()
+            this.listenAndServeTLS(this.certFile, this.keyFile)
+        } else {
+            this.listenAndServe()
+        }
+    }
+
+}
+
+
+javel_parsePath(path cpstring, resp http_response*) cpstring {
+    p = string(path)
+
+    if p.hasSuffix("/") {
+        p.append("index.html")
+    } else if p.count(".") == 0 {
+        p.append(".html")
+    }
+
+    if p.hasSuffix(".html") {
+        resp.setHeader("content-type", "text/html")        
+    } else if p.hasSuffix(".css") {
+        resp.setHeader("content-type", "text/css")        
+    } else if p.hasSuffix(".js") {
+        resp.setHeader("content-type", "text/javascript")        
+    } else if p.hasSuffix(".json") {
+        resp.setHeader("content-type", "application/json")        
+    } else if p.hasSuffix(".png") {
+        resp.setHeader("content-type", "image/png")        
+    } else if p.hasSuffix(".jpeg") {
+        resp.setHeader("content-type", "image/jpeg")        
+    } else if p.hasSuffix(".mov") {
+        resp.setHeader("content-type", "video/mov")        
+    } else if p.hasSuffix(".mp4") {
+        resp.setHeader("content-type", "video/mp4")        
+    } else if p.hasSuffix(".wasm") {
+        resp.setHeader("content-type", "application/wasm")        
+    }
+
+    return p.str()
+}
+
+#include "streams.bah"
+#include "htmlTemplate.bah"
+#include "handlers.bah"

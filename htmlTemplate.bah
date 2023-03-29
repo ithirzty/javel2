@@ -1,0 +1,109 @@
+__JAVEL_parseHTMLtemplate(file []char, req http_request*) []char {
+    nf = []char
+    i=0; for i < len(file), i++ {
+        if i + 1 < len(file) && file[i] == '<' && file[i+1] == '%' {
+            name = strBuilder{}
+            type = strBuilder{}
+            start = i
+            i += 2
+            
+            for i < len(file), i++ {
+                if isSpace(file[i]) == false {
+                    break
+                }
+            }
+
+            for i < len(file), i++ {
+                if isAlphaNumeric(file[i]) == false {
+                    break
+                }
+                type.append(file[i])
+            }
+
+            for i < len(file), i++ {
+                if isSpace(file[i]) == false {
+                    break
+                }
+            }
+
+            if file[i] != ':' {
+                i = start
+                nf[len(nf)] = file[i]
+                continue
+            }
+            i++
+
+            for i < len(file), i++ {
+                if isSpace(file[i]) == false {
+                    break
+                }
+            }
+
+            for i < len(file), i++ {
+                if isSpace(file[i]) {
+                    break
+                }
+                name.append(file[i])
+            }
+
+            for i < len(file), i++ {
+                if isSpace(file[i]) == false {
+                    break
+                }
+            }
+
+            if i+1 < len(file) && file[i] == '%' && file[i+1] == '>' {
+                res = ""
+                if type.str() == "function" {
+                    args = []ptr{req}
+                    res = <cpstring>evalCall(name.str(), args)
+                } else if type.str() == "stream" {
+                    id = __JAVEL2_generateNewStream(name.str(), req)
+                    res = "
+                    <div class=\"javel_stream\" id=\"javel_"+id+"\"></div>
+                    <script>
+                    window.addEventListener('DOMContentLoaded', async ()=>{
+                        const response = await fetch('/__JAVEL/stream', {
+                            method: 'GET',
+                            headers: {
+                                'JAVEL_stream_id': '"+id+"'
+                            }
+                        })
+                        const reader = response.body.getReader()
+                        while (true) {
+                            const {value, done} = await reader.read()
+                            if (done) break
+                            let vals = new TextDecoder().decode(value).split('\\n')
+                            let val = vals[vals.length-1]
+                            document.getElementById('javel_"+id+"').innerHTML = val
+                        }
+                    })
+                    </script>"
+                } else if type.str() == "file" {
+                    fs = fileStream{}
+                    fs.open(name.str(), "r")
+                    if fs.isValid() != false {
+                        fres = __JAVEL_parseHTMLtemplate(fs.readBytes(), req)
+                        fs.close()
+                        j=0; for j < len(fres), j++ {
+                            nf[len(nf)] = fres[j]
+                        }
+                    } else {
+                        println("JAVEL2: Error opening file '"+name.str()+"'.")
+                    }
+                }
+                j=0; for j < len(res), j++ {
+                    nf[len(nf)] = res[j]
+                }
+                
+                i++
+                continue
+            }
+            
+            i = start
+        }
+
+        nf[len(nf)] = file[i]
+    }
+    return nf
+}

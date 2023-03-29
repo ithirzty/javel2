@@ -1,0 +1,81 @@
+struct javel2_streamWrap {
+    id: int
+    req: http_request*
+    name: cpstring
+}
+
+struct javel2_stream {
+    resp: http_response*
+
+    send(s cpstring) bool {
+        arr = Bah_Array_Type{
+            elemSize: 1
+            length: len(s)
+            data: cStr(s)
+        }
+        return this.resp.flush(<[]char>&arr)
+    }
+
+    sendBytes(arr []char) bool {
+        return this.resp.flush(arr)
+    }
+
+}
+
+__JAVEL2_streams = []javel2_streamWrap*
+__JAVEL2_mutex = mutex()
+
+__JAVEL2_generateNewStream(name cpstring, req http_request*) cpstring {
+    js = new javel2_streamWrap{
+        req: req
+        name: name
+    }
+    __JAVEL2_mutex.lock()
+    js.id = getTimeUnix()
+    __JAVEL2_streams[len(__JAVEL2_streams)] = js
+    __JAVEL2_mutex.unlock()
+    return intToStr(js.id)
+}
+
+__JAVEL2_consumeStream(id int) javel2_streamWrap* {
+    js javel2_streamWrap*
+    __JAVEL2_mutex.lock()
+    i=0; for i < len(__JAVEL2_streams), i++ {
+        if __JAVEL2_streams[i].id == id {
+            js = __JAVEL2_streams[i]
+            delete(__JAVEL2_streams, i)
+            break
+        }
+    }
+    __JAVEL2_mutex.unlock()
+    return js
+}
+
+
+javel2_sreamHandle(pr ptr, req http_request*, resp http_response*) {
+    idStr = req.getHeader("JAVEL_stream_id")
+    if len(idStr) == 0 {
+        return
+    }
+    strm = __JAVEL2_consumeStream(strToInt(idStr))
+    
+    if strm == null {
+        resp.write("Error: sream already consumed.")
+        resp.send()
+        return
+    }
+
+    fnStream = javel2_stream {
+        resp
+    }
+
+    resp.code = HTTP_PARTIAL_CONTENT
+    resp.setHeader("content-type", "text/html")
+    resp.setHeader("Cache-Control", "no-cache")
+    resp.write("\r\n")
+    resp.send()
+    
+    args = []ptr{req, &fnStream}
+
+    evalCall(strm.name, args)
+}
