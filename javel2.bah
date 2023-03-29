@@ -118,3 +118,4 @@ javel_parsePath(path cpstring, resp http_response*) cpstring {
 #include "streams.bah"
 #include "htmlTemplate.bah"
 #include "handlers.bah"
+#include "wrappers.bah"
