@@ -14,7 +14,7 @@ javel2_serveFile(pr ptr, req http_request*, resp http_response*) {
     file = fm.open(p)
     l = fm.size
 
-    if fm.isValid() == false || string(req.path).count("/..") > 0 {
+    if fm.isValid() == false || file == null || string(req.path).count("/..") > 0 {
         fm.close()
         r.error(404, req, resp)
         return
@@ -35,7 +35,7 @@ javel2_serveFile(pr ptr, req http_request*, resp http_response*) {
     start = 0
     resp.code = HTTP_PARTIAL_CONTENT
 
-    if len(startStr) == 0 {
+    if len(startStr) < 8 {
         resp.setHeader("content-length", intToStr(l))
         resp.setHeader("accept-range", "bytes")
         resp.setHeader("content-range", "bytes 0-"+intToStr(l-1)+"/"+intToStr(l))
@@ -47,6 +47,13 @@ javel2_serveFile(pr ptr, req http_request*, resp http_response*) {
     }
 
     startStr = startStr[6: len(startStr)-1]
+    if len(startStr) == 0 {
+        fm.close()
+        resp.code = 400
+        resp.write("malformed request")
+        resp.send()
+        return
+    }
     start = strToInt(startStr)
     resp.setHeader("accept-range", "bytes")
     resp.setHeader("content-range", "bytes "+intToStr(start)+"-"+intToStr(l-1)+"/"+intToStr(l))
