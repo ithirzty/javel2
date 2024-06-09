@@ -1,13 +1,13 @@
 struct javel2_streamWrap {
     id: int
     req: http_request*
-    name: cpstring
+    name: str
 }
 
 struct javel2_stream {
     resp: http_response*
 
-    send(s cpstring) bool {
+    send(s str) bool {
         arr = Bah_Array_Type{
             elemSize: 1
             length: len(s)
@@ -25,7 +25,7 @@ struct javel2_stream {
 __JAVEL2_streams = []javel2_streamWrap*
 __JAVEL2_mutex = mutex()
 
-__JAVEL2_generateNewStream(name cpstring, req http_request*) cpstring {
+__JAVEL2_generateNewStream(name str, req http_request*) str {
     js = new javel2_streamWrap{
         req: req
         name: name

@@ -15,8 +15,8 @@ javel2_defaultErrorPTR = <ptr>javel2_defaultError
 javel2_serveFilePTR = <ptr>javel2_serveFile
 
 struct javel2_route {
-    base: cpstring
-    path: cpstring
+    base: str
+    path: str
     cacheMaxAge: int = -1
     disableParsing: bool
     handle: function(javel2_route*, http_request*, http_response*) = javel2_serveFilePTR
@@ -36,8 +36,8 @@ struct javel2_route {
 }
 
 struct javel2 extend http_server {
-    certFile: cpstring
-    keyFile: cpstring
+    certFile: str
+    keyFile: str
     routes: []javel2_route*
 
     selectRoute(req http_request*, resp http_response*) {
@@ -82,7 +82,7 @@ struct javel2 extend http_server {
 }
 
 
-javel_parsePath(path cpstring, resp http_response*) cpstring {
+javel_parsePath(path str, resp http_response*) str {
     p = string(path)
 
     if p.hasSuffix("/") {

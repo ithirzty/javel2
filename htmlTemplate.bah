@@ -56,7 +56,7 @@ __JAVEL_parseHTMLtemplate(file []char, req http_request*) []char {
                 res = ""
                 if type.str() == "function" {
                     args = []ptr{req}
-                    res = <cpstring>evalCall(name.str(), args)
+                    res = <str>evalCall(name.str(), args)
                 } else if type.str() == "stream" {
                     id = __JAVEL2_generateNewStream(name.str(), req)
                     res = "
