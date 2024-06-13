@@ -1,1 +1,1 @@
-{"name": "ithirzty/javel2", "url": "https://github.com/ithirzty/javel2", "ver": 1.400000, "deps": []}
+{"name": "ithirzty/javel2", "url": "https://github.com/ithirzty/javel2", "ver": 1.500000, "deps": []}
